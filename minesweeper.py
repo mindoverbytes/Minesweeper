@@ -6,8 +6,9 @@ class Minesweeper:
         self.cols = cols
         self.num_mines = num_mines
         self.board = [[' ' for _ in range(cols)] for _ in range(rows)]
-        self.flags = [[False for _ in range(cols)] for _ in range(rows)]  
-        self.num_revealed = 0  
+        self.flags = [[False for _ in range(cols)] for _ in range(rows)]
+        self.revealed = [[False for _ in range(cols)] for _ in range(rows)]
+        self.num_revealed = 0
         self.create_mines()
 
     def create_mines(self):
@@ -23,11 +24,18 @@ class Minesweeper:
         print('   ' + '  '.join(str(i) for i in range(self.cols)))
         print('  ' + '+---' * self.cols + '+')
         for i, row in enumerate(self.board):
-            print(i, '| ' + ' | '.join(
-                cell if (cell != 'X' and not self.flags[i][j]) or (show_mines and cell == 'X') else 'F'
-                if self.flags[i][j] else ' '
-                for j, cell in enumerate(row)) + ' |')
+            print(i, '| ' + ' | '.join(self.get_cell_display(i, j, show_mines) for j in range(self.cols)) + ' |')
             print('  ' + '+---' * self.cols + '+')
+
+    def get_cell_display(self, row, col, show_mines):
+        if self.revealed[row][col]:
+            return self.board[row][col] if self.board[row][col] != ' ' else ' '
+        elif self.flags[row][col]:
+            return '🚩'
+        elif show_mines and self.board[row][col] == 'X':
+            return '💣'
+        else:
+            return '⬜'
 
     def count_adjacent_mines(self, row, col):
         count = 0
@@ -39,120 +47,101 @@ class Minesweeper:
         return count
 
     def reveal_cell(self, row, col):
-        if not (0 <= row < self.rows) or not (0 <= col < self.cols):
+        if not self.is_valid_position(row, col):
             print("Invalid input. Row and column numbers must be within range.")
-            return True  
+            return False
         if self.flags[row][col]:
             print("Cell is flagged. Unflag it before revealing.")
-            return True  
+            return True
         if self.board[row][col] == 'X':
             print("Hit a mine!")
-            return False  
-        else:
-            count = self.count_adjacent_mines(row, col)
-            self.board[row][col] = str(count) if count > 0 else ' '
-            self.num_revealed += 1
-            if count == 0:
-                self.reveal_empty_cells(row, col)
+            return False
+        if self.revealed[row][col]:
             return True
+        
+        count = self.count_adjacent_mines(row, col)
+        self.board[row][col] = str(count) if count > 0 else ' '
+        self.revealed[row][col] = True
+        self.num_revealed += 1
+        if count == 0:
+            self.reveal_empty_cells(row, col)
+        return True
 
     def reveal_empty_cells(self, row, col):
         stack = [(row, col)]
-        visited = set()  
         while stack:
             r, c = stack.pop()
-            visited.add((r, c))
             for dr in range(-1, 2):
                 for dc in range(-1, 2):
                     nr, nc = r + dr, c + dc
-                    if (0 <= nr < self.rows) and (0 <= nc < self.cols) and (nr, nc) not in visited:
+                    if self.is_valid_position(nr, nc) and not self.revealed[nr][nc] and not self.flags[nr][nc]:
                         count = self.count_adjacent_mines(nr, nc)
                         self.board[nr][nc] = str(count) if count > 0 else ' '
+                        self.revealed[nr][nc] = True
                         self.num_revealed += 1
-                        visited.add((nr, nc))
                         if count == 0:
                             stack.append((nr, nc))
 
     def toggle_flag(self, row, col):
-        if not (0 <= row < self.rows) or not (0 <= col < self.cols):
+        if not self.is_valid_position(row, col):
             print("Invalid input. Row and column numbers must be within range.")
-            return  
+            return
         self.flags[row][col] = not self.flags[row][col]
 
     def check_win(self):
         total_cells = self.rows * self.cols
         return total_cells - self.num_revealed == self.num_mines
 
+    def is_valid_position(self, row, col):
+        return 0 <= row < self.rows and 0 <= col < self.cols
+
+def get_valid_input(prompt, valid_range):
+    while True:
+        try:
+            value = int(input(prompt))
+            if value in valid_range:
+                return value
+            else:
+                print(f"Please enter a value within the range {valid_range}.")
+        except ValueError:
+            print("Invalid input. Please enter a valid integer.")
+
 def play_game():
     while True:
-        rows = input("Enter number of rows (maximum 9): ")
-        cols = input("Enter number of columns (maximum 9): ")
-        num_mines = input("Enter number of mines: ")
-
-        try:
-            rows = int(rows)
-            cols = int(cols)
-            num_mines = int(num_mines)
-            if rows <= 0 or rows > 9 or cols <= 0 or cols > 9:
-                print("Rows and columns must be between 1 and 9.")
-                continue
-            if num_mines <= 0:
-                print("Number of mines must be greater than zero.")
-                continue
-        except ValueError:
-            print("Invalid input. Please enter valid integers for rows, columns, and mines.")
-            continue
+        rows = get_valid_input("Enter number of rows (maximum 9): ", range(1, 10))
+        cols = get_valid_input("Enter number of columns (maximum 9): ", range(1, 10))
+        num_mines = get_valid_input("Enter number of mines: ", range(1, rows * cols))
 
         game = Minesweeper(rows, cols, num_mines)
         game.print_board()
 
         while True:
             action = input("Enter 'R' to reveal, 'F' to flag/unflag a cell: ").upper()
-            if action == 'R':
-                try:
-                    row = int(input("Enter row number (0 to {}): ".format(rows - 1)))
-                    col = int(input("Enter column number (0 to {}): ".format(cols - 1)))
-                except ValueError:
-                    print("Invalid input. Please enter valid integers for row and column numbers.")
-                    continue
+            if action in ('R', 'F'):
+                row = get_valid_input(f"Enter row number (0 to {rows - 1}): ", range(rows))
+                col = get_valid_input(f"Enter column number (0 to {cols - 1}): ", range(cols))
 
-                if not (0 <= row < rows) or not (0 <= col < cols):
-                    print("Invalid input. Row and column numbers must be within range.")
-                    continue
-
-                if not game.reveal_cell(row, col):
-                    print("Game Over! You hit a mine.")
-                    print("Final board:")
-                    game.print_board(show_mines=True)
-                    break  
-                game.print_board()
-                if game.check_win():
-                    print("Congratulations! You have won!")
-                    game.print_board(show_mines=True)
-                    break  
-            elif action == 'F':
-                try:
-                    row = int(input("Enter row number (0 to {}): ".format(rows - 1)))
-                    col = int(input("Enter column number (0 to {}): ".format(cols - 1)))
-                except ValueError:
-                    print("Invalid input. Please enter valid integers for row and column numbers.")
-                    continue
-
-                if not (0 <= row < rows) or not (0 <= col < cols):
-                    print("Invalid input. Row and column numbers must be within range.")
-                    continue
-
-                game.toggle_flag(row, col)
-                game.print_board()
-                if game.check_win():
-                    print("Congratulations! You have won!")
-                    game.print_board(show_mines=True)
-                    break  
+                if action == 'R':
+                    if not game.reveal_cell(row, col):
+                        print("Game Over! You hit a mine.")
+                        game.print_board(show_mines=True)
+                        break
+                    game.print_board()
+                    if game.check_win():
+                        print("Congratulations! You have won!")
+                        game.print_board(show_mines=True)
+                        break
+                elif action == 'F':
+                    game.toggle_flag(row, col)
+                    game.print_board()
+                    if game.check_win():
+                        print("Congratulations! You have won!")
+                        game.print_board(show_mines=True)
+                        break
             else:
                 print("Invalid action. Please enter 'R' to reveal or 'F' to flag/unflag a cell.")
 
-        play_again = input("Do you want to play again? (yes/no): ").lower()
-        if play_again != 'yes':
+        if input("Do you want to play again? (yes/no): ").lower() != 'yes':
             break
 
 if __name__ == "__main__":
