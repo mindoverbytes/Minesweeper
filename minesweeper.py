@@ -22,20 +22,20 @@ class Minesweeper:
                 mines_placed += 1
 
     def print_board(self, show_mines=False):
+        print("\n")
         print('   ' + '  '.join(str(i) for i in range(self.cols)))
-        print('  ' + '+---' * self.cols + '+')
         for i, row in enumerate(self.board):
-            print(i, '| ' + ' | '.join(self.get_cell_display(i, j, show_mines) for j in range(self.cols)) + ' |')
-            print('  ' + '+---' * self.cols + '+')
+            print(i, ' '.join(self.get_cell_display(i, j, show_mines) for j in range(self.cols)))
+        print("\n")
 
     def get_cell_display(self, row, col, show_mines):
         if self.revealed[row][col]:
             if self.board[row][col] == ' ':
                 return '⬛'
             elif self.board[row][col].isdigit():
-                return self.number_emojis[int(self.board[row][col])]
+                return self.number_emojis[int(self.board[row][col])] + ' '
             else:
-                return self.board[row][col]
+                return self.board[row][col] + ' '
         elif self.flags[row][col]:
             return '🚩'
         elif show_mines and self.board[row][col] == 'X':
@@ -113,42 +113,38 @@ def get_valid_input(prompt, valid_range):
             print("Invalid input. Please enter a valid integer.")
 
 def play_game():
+    rows = get_valid_input("Enter number of rows (maximum 9): ", range(1, 10))
+    cols = get_valid_input("Enter number of columns (maximum 9): ", range(1, 10))
+    num_mines = get_valid_input("Enter number of mines: ", range(1, rows * cols))
+
+    game = Minesweeper(rows, cols, num_mines)
+    game.print_board()
+
     while True:
-        rows = get_valid_input("Enter number of rows (maximum 9): ", range(1, 10))
-        cols = get_valid_input("Enter number of columns (maximum 9): ", range(1, 10))
-        num_mines = get_valid_input("Enter number of mines: ", range(1, rows * cols))
+        action = input("Enter 'R' to reveal, 'F' to flag/unflag a cell: ").upper()
+        if action in ('R', 'F'):
+            row = get_valid_input(f"Enter row number (0 to {rows - 1}): ", range(rows))
+            col = get_valid_input(f"Enter column number (0 to {cols - 1}): ", range(cols))
 
-        game = Minesweeper(rows, cols, num_mines)
-        game.print_board()
-
-        while True:
-            action = input("Enter 'R' to reveal, 'F' to flag/unflag a cell: ").upper()
-            if action in ('R', 'F'):
-                row = get_valid_input(f"Enter row number (0 to {rows - 1}): ", range(rows))
-                col = get_valid_input(f"Enter column number (0 to {cols - 1}): ", range(cols))
-
-                if action == 'R':
-                    if not game.reveal_cell(row, col):
-                        print("Game Over! You hit a mine.")
-                        game.print_board(show_mines=True)
-                        break
-                    game.print_board()
-                    if game.check_win():
-                        print("Congratulations! You have won!")
-                        game.print_board(show_mines=True)
-                        break
-                elif action == 'F':
-                    game.toggle_flag(row, col)
-                    game.print_board()
-                    if game.check_win():
-                        print("Congratulations! You have won!")
-                        game.print_board(show_mines=True)
-                        break
-            else:
-                print("Invalid action. Please enter 'R' to reveal or 'F' to flag/unflag a cell.")
-
-        if input("Do you want to play again? (yes/no): ").lower() != 'yes':
-            break
+            if action == 'R':
+                if not game.reveal_cell(row, col):
+                    print("Game Over! You hit a mine.")
+                    game.print_board(show_mines=True)
+                    break
+                game.print_board()
+                if game.check_win():
+                    print("Congratulations! You have won!")
+                    game.print_board(show_mines=True)
+                    break
+            elif action == 'F':
+                game.toggle_flag(row, col)
+                game.print_board()
+                if game.check_win():
+                    print("Congratulations! You have won!")
+                    game.print_board(show_mines=True)
+                    break
+        else:
+            print("Invalid action. Please enter 'R' to reveal or 'F' to flag/unflag a cell.")
 
 if __name__ == "__main__":
     play_game()
