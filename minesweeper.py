@@ -10,6 +10,7 @@ class Minesweeper:
         self.revealed = [[False for _ in range(cols)] for _ in range(rows)]
         self.num_revealed = 0
         self.create_mines()
+        self.number_emojis = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣']
 
     def create_mines(self):
         mines_placed = 0
@@ -29,7 +30,12 @@ class Minesweeper:
 
     def get_cell_display(self, row, col, show_mines):
         if self.revealed[row][col]:
-            return self.board[row][col] if self.board[row][col] != ' ' else ' '
+            if self.board[row][col] == ' ':
+                return '⬛'
+            elif self.board[row][col].isdigit():
+                return self.number_emojis[int(self.board[row][col])]
+            else:
+                return self.board[row][col]
         elif self.flags[row][col]:
             return '🚩'
         elif show_mines and self.board[row][col] == 'X':
@@ -68,9 +74,9 @@ class Minesweeper:
         return True
 
     def reveal_empty_cells(self, row, col):
-        stack = [(row, col)]
-        while stack:
-            r, c = stack.pop()
+        queue = [(row, col)]
+        while queue:
+            r, c = queue.pop(0)
             for dr in range(-1, 2):
                 for dc in range(-1, 2):
                     nr, nc = r + dr, c + dc
@@ -80,7 +86,7 @@ class Minesweeper:
                         self.revealed[nr][nc] = True
                         self.num_revealed += 1
                         if count == 0:
-                            stack.append((nr, nc))
+                            queue.append((nr, nc))
 
     def toggle_flag(self, row, col):
         if not self.is_valid_position(row, col):
